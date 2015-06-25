@@ -41,7 +41,7 @@ import com.anaximandre.ampache.Album;
 import com.anaximandre.zampache.R;
 
 /**
- * @author Daniel Schruhl
+ * @author Daniel Schruhl, Anthony Gasperin.
  * 
  */
 public class AlbumArrayAdapter extends ArrayAdapter<String> implements SectionIndexer {
@@ -86,7 +86,7 @@ public class AlbumArrayAdapter extends ArrayAdapter<String> implements SectionIn
 		albumArtist.setText(objectValues.get(position).getArtist());
 		
 		String songsText = " Song";
-		if (objectValues.get(position).getTracks() > 1) {
+		if (objectValues.get(position).getTracks() > 1){
 			songsText = " Songs";
 		}
 		albumSongs.setText(String.valueOf(objectValues.get(position).getTracks()) + songsText);

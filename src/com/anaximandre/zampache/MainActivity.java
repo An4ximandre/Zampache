@@ -339,6 +339,8 @@ public class MainActivity extends FragmentActivity {
 				getActionBar().setTitle(controller.getFragmentsNames()[0]);
 
 				/** Sync Files **/
+				fillArtistList();
+				fillSongsList();
 				//synchronize(true);
 			}
 		}
