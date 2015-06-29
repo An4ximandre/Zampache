@@ -47,6 +47,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.util.Xml;
+import android.widget.Toast;
 
 import com.anaximandre.ampache.Album;
 import com.anaximandre.ampache.Artist;
@@ -698,6 +699,48 @@ public class Controller {
 		Log.d("albums:", this.albums.toString());
 	}
 
+	
+	private void m1ParseAlbumsXML(XmlPullParser parser,ArrayList<Album> albumsList) throws XmlPullParserException, IOException {
+		
+		int eventType = parser.getEventType();
+		Album currentAlbum = null;
+		while (eventType != XmlPullParser.END_DOCUMENT) {
+			String name = null;
+			switch (eventType) {
+			case XmlPullParser.START_TAG:
+				name = parser.getName();
+				if (name.equals("album")) {
+					currentAlbum = new Album();
+					currentAlbum.setId(Integer.parseInt((parser.getAttributeValue(null, "id"))));
+				} else if (currentAlbum != null) {
+					if (name.equals("name")) {
+						currentAlbum.setName(parser.nextText());
+					} else if (name.equals("artist")) {
+						// currentAlbum.setArtistId(Integer.parseInt(parser.getAttributeValue(null, "id")));
+						currentAlbum.setArtist(parser.nextText());
+					} else if (name.equals("tracks")) {
+						currentAlbum.setTracks(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("art")) {
+						currentAlbum.setArt(parser.nextText());
+					}
+				}
+				break;
+			case XmlPullParser.END_TAG:
+				name = parser.getName();
+				if (name.equalsIgnoreCase("album") && currentAlbum != null) {
+					albumsList.add(currentAlbum);
+				
+				}
+			}
+			eventType = parser.next();
+		}
+		Log.d("albums:", albumsList.toString());
+	}
+	
+	
+	
+	
+	
 	public void parseArtists(String urlString) {
 		Log.d("artists", urlString);
 		Log.d("artists anzahl", String.valueOf(server.getAmpacheConnection().getArtists()));
@@ -995,7 +1038,7 @@ public class Controller {
 	private class DownloadAlbumsFromArtistXml extends AsyncTask<Artist,Void,Void>{
 
 		AsyncAlbumTask mAsyncTaskCallback;
-		
+		ArrayList albumsList;
 		public DownloadAlbumsFromArtistXml(AsyncAlbumTask tc){
 			mAsyncTaskCallback=tc;
 			
@@ -1022,7 +1065,8 @@ public class Controller {
 						parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
 						Log.d("Albums",in_s.toString()+":"+a.getName());
 						parser.setInput(in_s, null);
-						parseAlbumsXML(parser);
+						albumsList = new ArrayList<Album>();
+						m1ParseAlbumsXML(parser,albumsList);
 					} catch (XmlPullParserException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
@@ -1037,7 +1081,7 @@ public class Controller {
 		}
 	    @Override
 	    protected void onPostExecute(Void result) {
-	        mAsyncTaskCallback.onTaskDone(albums);
+	        mAsyncTaskCallback.onTaskDone(albumsList);
 	    }
 		
 	}
@@ -1063,7 +1107,17 @@ public class Controller {
 	public void asyncGetSongs(CallBackGetSongsTask callBackGetSongsTask){
 		new AsyncGetSongsTask(callBackGetSongsTask).execute();
 	}
+
 	
+	/**
+	 * 
+	 * @param callBackGetAlbumsTask
+	 * 
+	 * @author Gasperin Anthony
+	 */
+	public void asyncGetAlbums(CallBackGetAlbumsTask callBackGetAlbumsTask){
+		new AsyncGetAlbumsTask(callBackGetAlbumsTask).execute();
+	}
 	/**
 	 * 
 	 * @author Gasperin Anthony
@@ -1221,6 +1275,7 @@ public class Controller {
 					} catch (XmlPullParserException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
+						onIOException();
 						e.printStackTrace();
 					}
 				} catch (Exception e) {
@@ -1243,6 +1298,10 @@ public class Controller {
 	    @Override
 	    protected void onProgressUpdate(Void...params){
 	    	mAsyncTaskCallback.updateProgressTask();
+	    }
+	    
+	    protected void onIOException(){
+	    	mAsyncTaskCallback.onIOException();
 	    }
 	    
 		private void mParseSongsXML(XmlPullParser parser) throws XmlPullParserException, IOException {
@@ -1301,6 +1360,126 @@ public class Controller {
 		}
 	}
 
+	
+	
+	/**
+	 * 
+	 * @author Gasperin Anthony
+	 *
+	 */
+	private class AsyncGetAlbumsTask extends AsyncTask<Void,Void,Void>{
+		CallBackGetAlbumsTask mAsyncTaskCallback;
+		
+		
+		public AsyncGetAlbumsTask(CallBackGetAlbumsTask callback){
+			mAsyncTaskCallback=callback;
+			
+		}
+		@Override
+		protected Void doInBackground(Void... params) {
+			// TODO Auto-generated method stub
+			String urlString="";
+			Log.d("AsyncGetAlbumsTask=","Get Some Albums");
+					urlString = controller.getServer().getHost() + "/server/xml.server.php?action=albums&auth="
+						+ controller.getServer().getAuthKey();
+			Log.d("AsyncGetAlbumsTask",urlString);
+				URL url;
+				try {
+					url = new URL(urlString);
+					HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+					con.getContentLength();
+					con.connect();
+	
+					XmlPullParserFactory pullParserFactory;
+					try {
+
+						pullParserFactory = XmlPullParserFactory.newInstance();
+						XmlPullParser parser = pullParserFactory.newPullParser();
+						InputStream in_s = con.getInputStream();
+						
+						parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+
+						parser.setInput(in_s, null);
+						mParseAlbumsXML(parser);
+			
+						
+					} catch (XmlPullParserException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						
+						e.printStackTrace();
+					}
+				} catch (Exception e) {
+					Log.d("error", "keine Verbindung möglich");
+					e.printStackTrace();
+				}
+			
+			return null;
+		}
+	    @Override
+	    protected void onPostExecute(Void result) {
+	        mAsyncTaskCallback.onTaskDone(albums);
+	    }		
+	    
+	    @Override
+	    protected void onPreExecute(){
+	    	mAsyncTaskCallback.setProgressVisibility();
+	    }
+	    
+	    @Override
+	    protected void onProgressUpdate(Void...params){
+	    	mAsyncTaskCallback.updateProgressTask();
+	    }
+	    
+	    protected void onIOException(){
+	    	
+	    }
+	    
+	    
+	    
+	    private void mParseAlbumsXML(XmlPullParser parser) throws XmlPullParserException, IOException {
+			albums = new ArrayList<Album>();
+			int eventType = parser.getEventType();
+			Album currentAlbum = null;
+			while (eventType != XmlPullParser.END_DOCUMENT) {
+				String name = null;
+				switch (eventType) {
+				case XmlPullParser.START_TAG:
+					name = parser.getName();
+					if (name.equals("album")) {
+						currentAlbum = new Album();
+						currentAlbum.setId(Integer.parseInt((parser.getAttributeValue(null, "id"))));
+					} else if (currentAlbum != null) {
+						if (name.equals("name")) {
+							currentAlbum.setName(parser.nextText());
+						} else if (name.equals("artist")) {
+							// currentAlbum.setArtistId(Integer.parseInt(parser.getAttributeValue(null, "id")));
+							currentAlbum.setArtist(parser.nextText());
+						} else if (name.equals("tracks")) {
+							currentAlbum.setTracks(Integer.parseInt(parser.nextText()));
+						} else if (name.equals("art")) {
+							currentAlbum.setArt(parser.nextText());
+						}
+					}
+					break;
+				case XmlPullParser.END_TAG:
+					name = parser.getName();
+					if (name.equalsIgnoreCase("album") && currentAlbum != null) {
+						albums.add(currentAlbum);
+						progress++;
+						publishProgress();
+					}
+				}
+				eventType = parser.next();
+			}
+			Log.d("albums:", albums.toString());
+		}	    
+		
+	}	
+	
+	
+	
 	/**
 	 * 
 	 * @author Gasperin Anthony
@@ -1326,6 +1505,23 @@ public class Controller {
 	public interface CallBackGetSongsTask{
 		
 		public void onTaskDone(ArrayList<Song> listSongs);
+		
+		public void updateProgressTask();
+		
+		public void setProgressVisibility();
+		
+		public void onIOException();
+		
+	}
+	
+	/**
+	 * 
+	 * @author Gasperin Anthony
+	 *
+	 */
+	public interface CallBackGetAlbumsTask{
+		
+		public void onTaskDone(ArrayList<Album> listAlbums);
 		
 		public void updateProgressTask();
 		

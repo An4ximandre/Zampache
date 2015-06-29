@@ -186,13 +186,16 @@ public class ArtistsView extends Fragment {
 			Log.d("Song title=",a.getName());
 			controller.getSelectedAlbums().add(a);
 		}
-		SelectedAlbumsView currentFrag = (SelectedAlbumsView)getFragmentManager().findFragmentByTag(ALBUMS_VIEW_FRAGMENT);
-		 getActivity().getSupportFragmentManager()
-         .beginTransaction()
-         .detach(currentFrag)
-         .attach(currentFrag)
-         .commit();
-		
+		try{
+			SelectedAlbumsView currentFrag = (SelectedAlbumsView)getFragmentManager().findFragmentByTag(ALBUMS_VIEW_FRAGMENT);
+			if (currentFrag !=null){
+				getActivity().getSupportFragmentManager()
+				.beginTransaction()
+				.detach(currentFrag)
+				.attach(currentFrag)
+				.commit();
+			}
+		}catch(NullPointerException ne){Log.e("UpdateAlbumsView","Fragment not found");}
 	}
 	
 	public interface AsyncAlbumTask{

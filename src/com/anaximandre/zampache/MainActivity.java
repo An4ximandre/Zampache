@@ -66,6 +66,7 @@ import com.anaximandre.ampache.ServerConnection;
 import com.anaximandre.ampache.Song;
 import com.anaximandre.zampache.Controller.CallBackGetArtistTask;
 import com.anaximandre.zampache.Controller.CallBackGetSongsTask;
+import com.anaximandre.zampache.Controller.CallBackGetAlbumsTask;
 import com.anaximandre.zampache.views.ArtistsView;
 import com.anaximandre.zampache.views.CurrentPlaylistView;
 import com.anaximandre.zampache.views.SelectedAlbumsView;
@@ -102,8 +103,10 @@ public class MainActivity extends FragmentActivity {
 
 	private boolean artistTaskDone=false;
 	private boolean songsTaskDone=false;
+	private boolean albumsTaskDone=false;
 	//Number of songs returned in the default request.
 	private int default_songs_number=5000;
+	private int default_albums_number=5000;
 	public final int id_artist_fragment=2;
 	public final int id_album_fragment=3;
 	@Override
@@ -149,6 +152,7 @@ public class MainActivity extends FragmentActivity {
 			//synchronize(false);
 			fillArtistList();
 			fillSongsList();
+			fillAlbumsList();
 			//launchGetArtistsTask();
 
 		} else if (controller.getServerConfig(this) != null
@@ -341,6 +345,7 @@ public class MainActivity extends FragmentActivity {
 				/** Sync Files **/
 				fillArtistList();
 				fillSongsList();
+				fillAlbumsList();
 				//synchronize(true);
 			}
 		}
@@ -456,6 +461,11 @@ public class MainActivity extends FragmentActivity {
 		controller.getServer().getCachedData().setSongs(controller.getSongs());
 	}
 	
+	public void updateListAlbums(){
+		controller.getServer().getCachedData().setAlbums(controller.getAlbums());
+	}
+	
+	
 	public void progressUpdate(){
 		
 		loadingText.setText(syncText);
@@ -484,11 +494,17 @@ public class MainActivity extends FragmentActivity {
 		}
 	}
 	
+	public void fillAlbumsList(){
+		if(controller.getServer().getCachedData().getAlbums().size()!= controller.getServer().getAmpacheConnection().getAlbums()){
+			launchGetAlbumsTask();
+		}		
+	}
+	
 	public void showProgressBar(){
 		syncText="Connecting server and Downloading data ... Please wait.";
 		loadingText.setText(syncText);
 		Log.d("DEBUG PRogressBAR","SONGS="+controller.getServer().getAmpacheConnection().getSongs());
-		syncFilesCount= controller.getServer().getAmpacheConnection().getArtists() + default_songs_number;
+		syncFilesCount= controller.getServer().getAmpacheConnection().getArtists() + default_songs_number + default_albums_number;
 		mProgress.setMax(100);
 		progressLinearLayout.setVisibility(LinearLayout.VISIBLE);
 		mProgress.setVisibility(ProgressBar.VISIBLE);
@@ -500,7 +516,7 @@ public class MainActivity extends FragmentActivity {
 	}
 	
 	public void hideProgressBar(){
-		if(artistTaskDone && songsTaskDone){
+		if(artistTaskDone && songsTaskDone && albumsTaskDone){
 			mProgress.setVisibility(ProgressBar.GONE);
 			loadingText.setVisibility(TextView.GONE);
 			progressLinearLayout.setVisibility(LinearLayout.GONE);
@@ -513,6 +529,11 @@ public class MainActivity extends FragmentActivity {
 			syncText="Artists List completed ... Let me download songs name! ";
 			loadingText.setText(syncText);
 			
+		}
+		
+		if(artistTaskDone && songsTaskDone && !albumsTaskDone){
+			syncText="Songs List completed ... Let me download albums name";
+			loadingText.setText(syncText);
 		}
 	}
 	
@@ -575,9 +596,37 @@ public class MainActivity extends FragmentActivity {
 			public void setProgressVisibility(){
 				//showProgressBar();
 			}
+			
+			public void onIOException(){
+				showToast("Server did not send any songs data",2000);
+			}
 		});
 	}
 
+	
+	
+	public void launchGetAlbumsTask(){
+		controller.asyncGetAlbums(new CallBackGetAlbumsTask(){
+			public void onTaskDone(ArrayList<Album> listAlbums){
+				albumsTaskDone=true;
+				hideProgressBar();
+				//updateListArtist();
+				updateListAlbums();
+				//updateArtistView();
+			}
+			
+			public void updateProgressTask(){
+				syncText="Downloading Albums ...";
+				Log.d("updateProgress","Downloading Albums");
+				progressUpdate();
+			}
+			
+			public void setProgressVisibility(){
+				//showProgressBar();
+			}
+		});
+	}	
+	
 	private class DownloadFilesTask extends AsyncTask<Void, Void, Void> {
 
 		@Override
