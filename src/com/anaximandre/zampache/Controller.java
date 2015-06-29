@@ -522,6 +522,64 @@ public class Controller {
 		Log.d("playlists:", this.playlists.toString());
 	}
 
+	
+	private void m1ParseSongsXML(XmlPullParser parser,DownloadSongsXml async, ArrayList songsList) throws XmlPullParserException, IOException {
+		if(songsList == null){Log.d("m1parseSongs","songsList not created"); return;}
+		//songsList = new ArrayList<Song>();
+		int eventType = parser.getEventType();
+		Song currentSong = null;
+		while (eventType != XmlPullParser.END_DOCUMENT) {
+			String name = null;
+			switch (eventType) {
+			case XmlPullParser.START_TAG:
+				name = parser.getName();
+				if (name.equals("song")) {
+					currentSong = new Song();
+					currentSong.setId(Integer.parseInt((parser.getAttributeValue(null, "id"))));
+				} else if (currentSong != null) {
+					if (name.equals("title")) {
+						currentSong.setTitle(parser.nextText());
+					} else if (name.equals("artist")) {
+						currentSong.setArtist(parser.nextText());
+						// currentSong.setArtistId(Integer.parseInt((parser.getAttributeValue(null, "id"))));
+					} else if (name.equals("album")) {
+						currentSong.setAlbum(parser.nextText());
+						// currentSong.setAlbumId(Integer.parseInt((parser.getAttributeValue(null, "id"))));
+					} else if (name.equals("track")) {
+						currentSong.setTrackNumber(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("time")) {
+						currentSong.setTime(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("year")) {
+						currentSong.setYear(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("bitrate")) {
+						currentSong.setBitrate(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("mode")) {
+						currentSong.setMode(parser.nextText());
+					} else if (name.equals("mime")) {
+						currentSong.setMime(parser.nextText());
+					} else if (name.equals("url")) {
+						currentSong.setUrl(parser.nextText());
+					} else if (name.equals("size")) {
+						currentSong.setSize(Integer.parseInt(parser.nextText()));
+					} else if (name.equals("art")) {
+						currentSong.setArt(parser.nextText());
+					}
+				}
+				break;
+			case XmlPullParser.END_TAG:
+				name = parser.getName();
+				if (name.equalsIgnoreCase("song") && currentSong != null) {
+					songsList.add(currentSong);
+					progress++;
+					
+				}
+			}
+			eventType = parser.next();
+		}
+		Log.d("songs:", songsList.toString());
+	}
+	
+	
 	private void parseSongsXML(XmlPullParser parser) throws XmlPullParserException, IOException {
 		this.songs = new ArrayList<Song>();
 		int eventType = parser.getEventType();
@@ -873,18 +931,19 @@ public class Controller {
 	}
 	
 	/**
-	 * An AsyncTask to download Songs of an Albums
+	 * An AsyncTask to download Songs of an Album
 	 *
 	 * @author: Gasperin Anthony
 	 */
 	private class DownloadSongsXml extends AsyncTask<Album,Void,Void>{
 
 		AsyncTaskCallback mAsyncTaskCallback;
-		
+		ArrayList songsFromAlbums;
 		public DownloadSongsXml(AsyncTaskCallback tc){
 			mAsyncTaskCallback=tc;
 			
 		}
+		
 		@Override
 		protected Void doInBackground(Album... params) {
 			// TODO Auto-generated method stub
@@ -907,7 +966,8 @@ public class Controller {
 						parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
 						Log.d("SONGS",in_s.toString());
 						parser.setInput(in_s, null);
-						parseSongsXML(parser);
+						songsFromAlbums = new ArrayList<Song>();
+						m1ParseSongsXML(parser,this,songsFromAlbums);
 					} catch (XmlPullParserException e) {
 						e.printStackTrace();
 					} catch (IOException e) {
@@ -922,7 +982,7 @@ public class Controller {
 		}
 	    @Override
 	    protected void onPostExecute(Void result) {
-	        mAsyncTaskCallback.onTaskDone(songs);
+	        mAsyncTaskCallback.onTaskDone(songsFromAlbums);
 	    }
 		
 	}
@@ -1123,6 +1183,7 @@ public class Controller {
 	 */
 	private class AsyncGetSongsTask extends AsyncTask<Void,Void,Void>{
 		CallBackGetSongsTask mAsyncTaskCallback;
+		
 		
 		public AsyncGetSongsTask(CallBackGetSongsTask callback){
 			mAsyncTaskCallback=callback;
