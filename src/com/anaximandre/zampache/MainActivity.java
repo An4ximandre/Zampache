@@ -23,6 +23,12 @@
  */
 package com.anaximandre.zampache;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 
 import android.annotation.SuppressLint;
@@ -109,6 +115,11 @@ public class MainActivity extends FragmentActivity {
 	private int default_albums_number=5000;
 	public final int id_artist_fragment=2;
 	public final int id_album_fragment=3;
+	
+	private final String artistsFileName="artists";
+	private final String songsFileName="songs";
+	private final String albumsFileName="albums";
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -148,13 +159,23 @@ public class MainActivity extends FragmentActivity {
 			tx.commit();
 			showToast(getResources().getString(R.string.toastServerConnected), Toast.LENGTH_LONG);
 			controller.loadCachedFiles();
-			/** Sync Files **/
-			//synchronize(false);
-			fillArtistList();
-			fillSongsList();
-			fillAlbumsList();
-			//launchGetArtistsTask();
+			
+			/** If serialized list of data exists then load it **/
+			if(serializedList()){
+				controller.setArtists(deserializeArtistsList());
+				controller.setSongs(deserializeSongsList());
+				controller.setAlbums(deserializeAlbumsList());
+				updateArtistView();			
+			}
+			else /** Download From Server **/
+			{
+				fillArtistList();
+				fillSongsList();
+				fillAlbumsList();
+			}
 
+
+			
 		} else if (controller.getServerConfig(this) != null
 				&& !controller.getServer().isConnected(controller.isOnline(getApplicationContext()))) {
 			FragmentTransaction tx = getSupportFragmentManager().beginTransaction();
@@ -524,6 +545,9 @@ public class MainActivity extends FragmentActivity {
 			float scale = getResources().getDisplayMetrics().density;
 			int dpAsPixels = (int) (16 * scale + 0.5f);
 			contentFrame.setPadding(dpAsPixels, dpAsPixels, dpAsPixels, dpAsPixels);
+			serializeArtistList();
+			serializeSongList();
+			serializeAlbumsList();
 		}
 		if (artistTaskDone && !songsTaskDone){
 			syncText="Artists List completed ... Let me download songs name! ";
@@ -534,6 +558,7 @@ public class MainActivity extends FragmentActivity {
 		if(artistTaskDone && songsTaskDone && !albumsTaskDone){
 			syncText="Songs List completed ... Let me download albums name";
 			loadingText.setText(syncText);
+			
 		}
 	}
 	
@@ -946,5 +971,154 @@ public class MainActivity extends FragmentActivity {
 			serviceConnected = false;
 		}
 	};
+	
+	/**
+	 * Serialize artists list
+	 */
+	private void serializeArtistList(){
+		ArrayList artists = controller.getArtists();
+        try {
+            FileOutputStream fos = getApplicationContext().openFileOutput(artistsFileName, Context.MODE_PRIVATE);//new FileOutputStream(artistsFileName);
+            ObjectOutputStream os = new ObjectOutputStream ( fos );
+            os.writeObject ( artists );
+            fos.close ();
+            os.close ();
+        } catch ( Exception ex ) {
+        	showToast("Super erreur de serializitaion",3000);
+            ex.printStackTrace ();
+        }
+	}
+
+
+	/**
+	 * Serialize songs list
+	 */
+	private void serializeSongList(){
+		ArrayList songs = controller.getSongs();
+        try {
+            FileOutputStream fos = getApplicationContext().openFileOutput(songsFileName, Context.MODE_PRIVATE);//new FileOutputStream(artistsFileName);
+            ObjectOutputStream os = new ObjectOutputStream ( fos );
+            os.writeObject ( songs );
+            fos.close ();
+            os.close ();
+        } catch ( Exception ex ) {
+        	showToast("Super erreur de serializitaion",3000);
+            ex.printStackTrace ();
+        }
+	}
+
+	/**
+	 * Serialize albums list
+	 */
+	private void serializeAlbumsList(){
+		ArrayList albums = controller.getAlbums();
+        try {
+            FileOutputStream fos = getApplicationContext().openFileOutput(albumsFileName, Context.MODE_PRIVATE);//new FileOutputStream(artistsFileName);
+            ObjectOutputStream os = new ObjectOutputStream ( fos );
+            os.writeObject ( albums );
+            fos.close ();
+            os.close ();
+        } catch ( Exception ex ) {
+        	showToast("Super erreur de serializitaion",3000);
+            ex.printStackTrace ();
+        }
+	}
+	
+	
+	/**
+	 * Deserialize artists list
+	 * 
+	 */
+	
+	private ArrayList<Artist> deserializeArtistsList(){
+	    ArrayList<Artist> artists;
+	     try
+	      {
+	         FileInputStream fileIn = getApplicationContext().openFileInput(artistsFileName);//new FileInputStream(artistsFileName);
+	         ObjectInputStream in = new ObjectInputStream(fileIn);
+	         artists= (ArrayList<Artist>) in.readObject();
+	         in.close();
+	         fileIn.close();
+	      }catch(IOException i)
+	      {
+	         i.printStackTrace();
+	         return null;
+	      }catch(ClassNotFoundException c)
+	      {
+	         System.out.println("Artist class not found");
+	         c.printStackTrace();
+	         return null;
+	      }
+	    return artists;
+	}
+	
+	/**
+	 * Deserialize songs list
+	 * 
+	 */
+	
+	private ArrayList<Song> deserializeSongsList(){
+	    ArrayList<Song> songs;
+	     try
+	      {
+	         FileInputStream fileIn = getApplicationContext().openFileInput(songsFileName);//new FileInputStream(artistsFileName);
+	         ObjectInputStream in = new ObjectInputStream(fileIn);
+	         songs= (ArrayList<Song>) in.readObject();
+	         in.close();
+	         fileIn.close();
+	      }catch(IOException i)
+	      {
+	         i.printStackTrace();
+	         return null;
+	      }catch(ClassNotFoundException c)
+	      {
+	         System.out.println("Song class not found");
+	         c.printStackTrace();
+	         return null;
+	      }
+	    return songs;
+	}
+
+	/**
+	 * Deserialize albums list
+	 * 
+	 */
+	
+	private ArrayList<Album> deserializeAlbumsList(){
+	    ArrayList<Album> albums;
+	     try
+	      {
+	         FileInputStream fileIn = getApplicationContext().openFileInput(albumsFileName);//new FileInputStream(artistsFileName);
+	         ObjectInputStream in = new ObjectInputStream(fileIn);
+	         albums= (ArrayList<Album>) in.readObject();
+	         in.close();
+	         fileIn.close();
+	      }catch(IOException i)
+	      {
+	         i.printStackTrace();
+	         return null;
+	      }catch(ClassNotFoundException c)
+	      {
+	         System.out.println("Album class not found");
+	         c.printStackTrace();
+	         return null;
+	      }
+	    return albums;
+	}
+	public Boolean fileExists(String filepath) {
+		File file;
+	    file = new File(filepath);
+	    return file.exists();
+
+	}	
+	
+	private boolean serializedList(){
+		//String zemDir= getApplicationInfo().dataDir;
+		String zemDir = getApplicationContext().getFilesDir().getAbsolutePath();
+		zemDir = zemDir+"/";
+		Log.e("ZEMDIR=",zemDir);
+		if(fileExists(zemDir+artistsFileName)&&fileExists(zemDir+songsFileName)&&fileExists(zemDir+albumsFileName)) return true;
+		else return false;
+	}
 
 }
