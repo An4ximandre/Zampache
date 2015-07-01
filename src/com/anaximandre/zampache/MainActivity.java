@@ -550,9 +550,15 @@ public class MainActivity extends FragmentActivity {
 			float scale = getResources().getDisplayMetrics().density;
 			int dpAsPixels = (int) (16 * scale + 0.5f);
 			contentFrame.setPadding(dpAsPixels, dpAsPixels, dpAsPixels, dpAsPixels);
-			serializeArtistList();
+			/*serializeArtistList();
 			serializeSongList();
-			serializeAlbumsList();
+			serializeAlbumsList();*/
+			AsyncSerialize asyncSerializeArtists = new AsyncSerialize(controller.getArtists(),artistsFileName);
+			AsyncSerialize asyncSerializeSongs = new AsyncSerialize(controller.getSongs(),songsFileName);
+			AsyncSerialize asyncSerializeAlbums = new AsyncSerialize(controller.getAlbums(),albumsFileName);
+			asyncSerializeArtists.execute();
+			asyncSerializeSongs.execute();
+			asyncSerializeAlbums.execute();
 		}
 		if (artistTaskDone && !songsTaskDone){
 			syncText="Artists List completed ... Let me download songs name! ";
@@ -1205,6 +1211,32 @@ public class MainActivity extends FragmentActivity {
 		         return null;
 		      }
 			
+			return null;
+		}
+		
+	}
+	
+	private class AsyncSerialize extends AsyncTask<Void,Void,Void>{
+
+		String fileName;
+		ArrayList listToSerialize;
+		public AsyncSerialize(ArrayList list,String file){
+			listToSerialize = list;
+			fileName = file;
+		}
+		@Override
+		protected Void doInBackground(Void... params) {
+			// TODO Auto-generated method stub
+			  try {
+		            FileOutputStream fos = getApplicationContext().openFileOutput(fileName, Context.MODE_PRIVATE);//new FileOutputStream(artistsFileName);
+		            ObjectOutputStream os = new ObjectOutputStream ( fos );
+		            os.writeObject ( listToSerialize );
+		            fos.close ();
+		            os.close ();
+		        } catch ( Exception ex ) {
+		        	showToast("Cannot Serialize list! ",3000);
+		            ex.printStackTrace ();
+		        }			
 			return null;
 		}
 		
