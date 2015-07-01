@@ -70,6 +70,7 @@ import com.anaximandre.ampache.Artist;
 import com.anaximandre.ampache.Playlist;
 import com.anaximandre.ampache.ServerConnection;
 import com.anaximandre.ampache.Song;
+import com.anaximandre.zampache.Controller.CallBackAsyncDeserialize;
 import com.anaximandre.zampache.Controller.CallBackGetArtistTask;
 import com.anaximandre.zampache.Controller.CallBackGetSongsTask;
 import com.anaximandre.zampache.Controller.CallBackGetAlbumsTask;
@@ -162,10 +163,13 @@ public class MainActivity extends FragmentActivity {
 			
 			/** If serialized list of data exists then load it **/
 			if(serializedList()){
-				controller.setArtists(deserializeArtistsList());
-				controller.setSongs(deserializeSongsList());
-				controller.setAlbums(deserializeAlbumsList());
-				updateArtistView();			
+				//controller.setArtists(deserializeArtistsList());
+				//controller.setSongs(deserializeSongsList());
+				//controller.setAlbums(deserializeAlbumsList());
+				//updateArtistView();	
+				deserializeArtistsList();
+				deserializeSongsList();
+				deserializeAlbumsList();
 			}
 			else /** Download From Server **/
 			{
@@ -521,8 +525,9 @@ public class MainActivity extends FragmentActivity {
 		}		
 	}
 	
-	public void showProgressBar(){
-		syncText="Connecting server and Downloading data ... Please wait.";
+	public void showProgressBar(String text){
+		//syncText="Connecting server and Downloading data ... Please wait.";
+		syncText = text;
 		loadingText.setText(syncText);
 		Log.d("DEBUG PRogressBAR","SONGS="+controller.getServer().getAmpacheConnection().getSongs());
 		syncFilesCount= controller.getServer().getAmpacheConnection().getArtists() + default_songs_number + default_albums_number;
@@ -598,7 +603,8 @@ public class MainActivity extends FragmentActivity {
 			}
 			
 			public void setProgressVisibility(){
-				showProgressBar();
+				String text="Connecting server and Downloading data ... Please wait";
+				showProgressBar(text);
 			}
 		});
 	}
@@ -1030,9 +1036,8 @@ public class MainActivity extends FragmentActivity {
 	 * 
 	 */
 	
-	private ArrayList<Artist> deserializeArtistsList(){
-	    ArrayList<Artist> artists;
-	     try
+	private void deserializeArtistsList(){
+	    /* try
 	      {
 	         FileInputStream fileIn = getApplicationContext().openFileInput(artistsFileName);//new FileInputStream(artistsFileName);
 	         ObjectInputStream in = new ObjectInputStream(fileIn);
@@ -1048,17 +1053,29 @@ public class MainActivity extends FragmentActivity {
 	         System.out.println("Artist class not found");
 	         c.printStackTrace();
 	         return null;
-	      }
-	    return artists;
-	}
+	      }*/
+	    AsyncDeserialize asyncTask = new AsyncDeserialize(new CallBackAsyncDeserialize(){
+
+			@Override
+			public void onTaskDone(ArrayList list) {
+				// TODO Auto-generated method stub
+				controller.setArtists((ArrayList<Artist>)list);
+				updateArtistView();
+				
+			}
+
+	    	
+	    },artistsFileName);
+	    asyncTask.execute();
+	  }
 	
 	/**
 	 * Deserialize songs list
 	 * 
 	 */
 	
-	private ArrayList<Song> deserializeSongsList(){
-	    ArrayList<Song> songs;
+	private void deserializeSongsList(){
+	   /* ArrayList<Song> songs;
 	     try
 	      {
 	         FileInputStream fileIn = getApplicationContext().openFileInput(songsFileName);//new FileInputStream(artistsFileName);
@@ -1076,7 +1093,19 @@ public class MainActivity extends FragmentActivity {
 	         c.printStackTrace();
 	         return null;
 	      }
-	    return songs;
+	    return songs;*/
+	    AsyncDeserialize asyncTask = new AsyncDeserialize(new CallBackAsyncDeserialize(){
+
+			@Override
+			public void onTaskDone(ArrayList list) {
+				// TODO Auto-generated method stub
+				controller.setSongs((ArrayList<Song>)list);
+				
+				
+			}
+	    	
+	    },songsFileName);
+	    asyncTask.execute();
 	}
 
 	/**
@@ -1084,8 +1113,8 @@ public class MainActivity extends FragmentActivity {
 	 * 
 	 */
 	
-	private ArrayList<Album> deserializeAlbumsList(){
-	    ArrayList<Album> albums;
+	private void deserializeAlbumsList(){
+	    /*ArrayList<Album> albums;
 	     try
 	      {
 	         FileInputStream fileIn = getApplicationContext().openFileInput(albumsFileName);//new FileInputStream(artistsFileName);
@@ -1103,8 +1132,22 @@ public class MainActivity extends FragmentActivity {
 	         c.printStackTrace();
 	         return null;
 	      }
-	    return albums;
+	    return albums;*/
+	    AsyncDeserialize asyncTask = new AsyncDeserialize(new CallBackAsyncDeserialize(){
+
+			@Override
+			public void onTaskDone(ArrayList list) {
+				// TODO Auto-generated method stub
+				controller.setAlbums((ArrayList<Album>)list);
+					
+			}
+	    	
+	    },albumsFileName);
+	    asyncTask.execute();
 	}
+	
+	
+	
 	public Boolean fileExists(String filepath) {
 		File file;
 	    file = new File(filepath);
@@ -1113,12 +1156,58 @@ public class MainActivity extends FragmentActivity {
 	}	
 	
 	private boolean serializedList(){
-		//String zemDir= getApplicationInfo().dataDir;
+	
 		String zemDir = getApplicationContext().getFilesDir().getAbsolutePath();
 		zemDir = zemDir+"/";
 		Log.e("ZEMDIR=",zemDir);
 		if(fileExists(zemDir+artistsFileName)&&fileExists(zemDir+songsFileName)&&fileExists(zemDir+albumsFileName)) return true;
 		else return false;
+	}
+	
+	
+	
+	private class AsyncDeserialize extends AsyncTask<Void,Void,Void>{
+
+		CallBackAsyncDeserialize callback;
+		ArrayList list;
+		String fileName;
+		
+		public AsyncDeserialize(CallBackAsyncDeserialize cb,String f){
+			callback=cb;
+			fileName =f;
+		}
+		@Override 
+		protected void onPostExecute(Void results){
+			callback.onTaskDone(list);
+			
+		}
+		
+
+		@Override
+		protected Void doInBackground(Void... params) {
+			// TODO Auto-generated method stub
+			//list = new ArrayList();
+		     try
+		      {
+		         FileInputStream fileIn = getApplicationContext().openFileInput(fileName);//new FileInputStream(artistsFileName);
+		         ObjectInputStream in = new ObjectInputStream(fileIn);
+		         list= (ArrayList) in.readObject();
+		         in.close();
+		         fileIn.close();
+		      }catch(IOException i)
+		      {
+		         i.printStackTrace();
+		         return null;
+		      }catch(ClassNotFoundException c)
+		      {
+		         System.out.println("Class not found");
+		         c.printStackTrace();
+		         return null;
+		      }
+			
+			return null;
+		}
+		
 	}
 
 }

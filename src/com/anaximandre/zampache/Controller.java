@@ -1477,6 +1477,7 @@ public class Controller {
 		}	    
 		
 	}	
+
 	
 	
 	
@@ -1528,5 +1529,17 @@ public class Controller {
 		public void setProgressVisibility();
 		
 		
+	}
+	
+	/**
+	 * Interface CallBackAsyncDeserialize:
+	 * Allows to update View when done
+	 * @author Anthony Gasperin
+	 * 
+	 */
+	
+	public interface CallBackAsyncDeserialize{
+		public void onTaskDone(ArrayList list);
+
 	}
 }
